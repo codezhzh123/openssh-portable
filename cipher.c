@@ -97,6 +97,9 @@ static const struct sshcipher ciphers[] = {
 				16, 16, 12, 16, 0, EVP_aes_128_gcm },
 	{ "aes256-gcm@openssh.com",
 				16, 32, 12, 16, 0, EVP_aes_256_gcm },
+#ifndef OPENSSL_NO_SM4
+	{ "sm4-ctr",		16, 16, 0, 0, 0, EVP_sm4_ctr },
+#endif
 #else
 	{ "aes128-ctr",		16, 16, 0, 0, CFLAG_AESCTR, NULL },
 	{ "aes192-ctr",		16, 24, 0, 0, CFLAG_AESCTR, NULL },

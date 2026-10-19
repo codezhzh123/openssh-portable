@@ -50,6 +50,9 @@ sshkey_ecdsa_fixup_group(EVP_PKEY *k)
 		NID_X9_62_prime256v1,
 		NID_secp384r1,
 		NID_secp521r1,
+#ifdef HAVE_SM2
+		NID_sm2,
+#endif
 		-1
 	};
 	int nid = -1;

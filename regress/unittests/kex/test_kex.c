@@ -166,6 +166,9 @@ do_kex_with_key(char *kex, char *cipher, char *mac,
 	server2->kex->kex[KEX_ECDH_SHA2] = kex_gen_server;
 #endif /* WITH_OPENSSL */
 	server2->kex->kex[KEX_C25519_SHA256] = kex_gen_server;
+#ifdef HAVE_SM2
+	server2->kex->kex[KEX_SM2_SM3] = kex_gen_server;
+#endif /* HAVE_SM2 */
 	server2->kex->kex[KEX_KEM_SNTRUP761X25519_SHA512] = kex_gen_server;
 	server2->kex->kex[KEX_KEM_MLKEM768X25519_SHA256] = kex_gen_server;
 	server2->kex->load_host_public_key = server->kex->load_host_public_key;
@@ -218,6 +221,9 @@ do_kex(char *kex)
 #ifdef WITH_OPENSSL
 	do_kex_with_key(kex, NULL, NULL, NULL, KEY_RSA, 2048);
 	do_kex_with_key(kex, NULL, NULL, NULL, KEY_ECDSA, 256);
+#ifdef HAVE_SM2
+	do_kex_with_key(kex, NULL, NULL, NULL, KEY_SM2, 256);
+#endif /* HAVE_SM2 */
 #endif /* WITH_OPENSSL */
 	do_kex_with_key(kex, NULL, NULL, NULL, KEY_ED25519, 256);
 }
@@ -234,6 +240,9 @@ kex_tests(void)
 	do_kex("diffie-hellman-group-exchange-sha1");
 	do_kex("diffie-hellman-group14-sha1");
 	do_kex("diffie-hellman-group1-sha1");
+#ifdef HAVE_SM2
+	do_kex("sm2-sm3");
+#endif /* HAVE_SM2 */
 	if (test_is_benchmark()) {
 		do_kex("diffie-hellman-group14-sha256");
 		do_kex("diffie-hellman-group16-sha512");

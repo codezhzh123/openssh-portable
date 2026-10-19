@@ -111,6 +111,7 @@ kex_gen_client(struct ssh *ssh)
 		r = kex_dh_keypair(kex);
 		break;
 	case KEX_ECDH_SHA2:
+	case KEX_SM2_SM3:
 		r = kex_ecdh_keypair(kex);
 		break;
 	case KEX_KEM_MLKEM768ECDH_SHA256:
@@ -189,6 +190,7 @@ input_kex_gen_reply(int type, uint32_t seq, struct ssh *ssh)
 		r = kex_dh_dec(kex, server_blob, &shared_secret);
 		break;
 	case KEX_ECDH_SHA2:
+	case KEX_SM2_SM3:
 		r = kex_ecdh_dec(kex, server_blob, &shared_secret);
 		break;
 	case KEX_KEM_MLKEM768ECDH_SHA256:
@@ -315,6 +317,7 @@ input_kex_gen_init(int type, uint32_t seq, struct ssh *ssh)
 		    &shared_secret);
 		break;
 	case KEX_ECDH_SHA2:
+	case KEX_SM2_SM3:
 		r = kex_ecdh_enc(kex, client_pubkey, &server_pubkey,
 		    &shared_secret);
 		break;

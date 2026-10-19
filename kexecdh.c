@@ -119,7 +119,7 @@ kex_ecdh_enc(struct kex *kex, const struct sshbuf *client_blob,
 	    (r = sshbuf_get_u32(server_blob, NULL)) != 0)
 		goto out;
 	if ((r = kex_ecdh_dec_key_group(kex, client_blob, server_key, group,
-	    0, shared_secretp)) != 0)
+	    0, shared_secretp, 1)) != 0)
 		goto out;
 	*server_blobp = server_blob;
 	server_blob = NULL;
@@ -131,7 +131,8 @@ kex_ecdh_enc(struct kex *kex, const struct sshbuf *client_blob,
 
 int
 kex_ecdh_dec_key_group(struct kex *kex, const struct sshbuf *ec_blob,
-    EC_KEY *key, const EC_GROUP *group, int raw, struct sshbuf **shared_secretp)
+    EC_KEY *key, const EC_GROUP *group, int raw, struct sshbuf **shared_secretp,
+    int server)
 {
 	struct sshbuf *buf = NULL;
 	BIGNUM *shared_secret = NULL;
@@ -170,10 +171,24 @@ kex_ecdh_dec_key_group(struct kex *kex, const struct sshbuf *ec_blob,
 		r = SSH_ERR_ALLOC_FAIL;
 		goto out;
 	}
+#ifdef HAVE_SM2
+	if (kex->ec_nid == NID_sm2) {
+		if (SM2KAP_compute_key(kbuf, klen, dh_pub, key, server,
+		    kex) != (int)klen) {
+			r = SSH_ERR_LIBCRYPTO_ERROR;
+			goto out;
+		}
+	} else if (ECDH_compute_key(kbuf, klen, dh_pub, key, NULL) !=
+	    (int)klen) {
+		r = SSH_ERR_LIBCRYPTO_ERROR;
+		goto out;
+	}
+#else
 	if (ECDH_compute_key(kbuf, klen, dh_pub, key, NULL) != (int)klen) {
 		r = SSH_ERR_LIBCRYPTO_ERROR;
 		goto out;
 	}
+#endif
 #ifdef DEBUG_KEXECDH
 	dump_digest("shared secret", kbuf, klen);
 #endif
@@ -209,7 +224,7 @@ kex_ecdh_dec(struct kex *kex, const struct sshbuf *server_blob,
 	int r;
 
 	r = kex_ecdh_dec_key_group(kex, server_blob, kex->ec_client_key,
-	    kex->ec_group, 0, shared_secretp);
+	    kex->ec_group, 0, shared_secretp, 0);
 	EC_KEY_free(kex->ec_client_key);
 	kex->ec_client_key = NULL;
 	return r;

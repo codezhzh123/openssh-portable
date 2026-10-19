@@ -43,6 +43,7 @@ for keytype in ${SSH_HOSTKEY_TYPES} ; do
 	grep -vi HostKeyAlgorithms $OBJ/sshd_proxy.bak > $OBJ/sshd_proxy
 	echo "HostKeyAlgorithms=+$keytype" >> $OBJ/sshd_proxy
 	algs=$keytype
+	test "x$keytype" = "xsm2" && continue
 	test "x$keytype" = "xssh-rsa" && algs=ssh-rsa,rsa-sha2-256,rsa-sha2-512
 	verbose "keytype $keytype"
 	cat > $OBJ/knownhosts_command << _EOF

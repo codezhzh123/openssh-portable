@@ -98,6 +98,7 @@ enum kex_exchange {
 	KEX_KEM_SNTRUP761X25519_SHA512,
 	KEX_KEM_MLKEM768X25519_SHA256,
 	KEX_KEM_MLKEM768ECDH_SHA256,
+	KEX_SM2_SM3,
 	KEX_MAX
 };
 
@@ -240,7 +241,7 @@ int	 kex_dh_enc(struct kex *, const struct sshbuf *, struct sshbuf **,
 int	 kex_dh_dec(struct kex *, const struct sshbuf *, struct sshbuf **);
 
 int	 kex_ecdh_dec_key_group(struct kex *, const struct sshbuf *, EC_KEY *key,
-	    const EC_GROUP *, int, struct sshbuf **);
+	    const EC_GROUP *, int, struct sshbuf **, int);
 
 int	 kex_ecdh_keypair(struct kex *);
 int	 kex_ecdh_enc(struct kex *, const struct sshbuf *, struct sshbuf **,
@@ -291,6 +292,11 @@ int	kexc25519_shared_key_ext(const u_char key[CURVE25519_SIZE],
     const u_char pub[CURVE25519_SIZE], struct sshbuf *out, int)
 	__attribute__((__bounded__(__minbytes__, 1, CURVE25519_SIZE)))
 	__attribute__((__bounded__(__minbytes__, 2, CURVE25519_SIZE)));
+
+#if defined(WITH_OPENSSL) && defined(NID_sm2)
+int	 SM2KAP_compute_key(void *out, size_t outlen, const EC_POINT *pub_key,
+    const EC_KEY *eckey, int server, const struct kex *kex);
+#endif
 
 #if defined(DEBUG_KEX) || defined(DEBUG_KEXDH) || defined(DEBUG_KEXECDH)
 void	dump_digest(const char *, const u_char *, int);

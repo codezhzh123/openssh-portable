@@ -129,6 +129,7 @@ ssh_init(struct ssh **sshp, int is_server, struct kex_params *kex_params)
 		ssh->kex->kex[KEX_DH_GEX_SHA1] = kexgex_server;
 		ssh->kex->kex[KEX_DH_GEX_SHA256] = kexgex_server;
 		ssh->kex->kex[KEX_ECDH_SHA2] = kex_gen_server;
+		ssh->kex->kex[KEX_SM2_SM3] = kex_gen_server;
 #endif /* WITH_OPENSSL */
 		ssh->kex->kex[KEX_C25519_SHA256] = kex_gen_server;
 		ssh->kex->kex[KEX_KEM_SNTRUP761X25519_SHA512] = kex_gen_server;
@@ -147,6 +148,7 @@ ssh_init(struct ssh **sshp, int is_server, struct kex_params *kex_params)
 		ssh->kex->kex[KEX_DH_GEX_SHA1] = kexgex_client;
 		ssh->kex->kex[KEX_DH_GEX_SHA256] = kexgex_client;
 		ssh->kex->kex[KEX_ECDH_SHA2] = kex_gen_client;
+		ssh->kex->kex[KEX_SM2_SM3] = kex_gen_client;
 #endif /* WITH_OPENSSL */
 		ssh->kex->kex[KEX_C25519_SHA256] = kex_gen_client;
 		ssh->kex->kex[KEX_KEM_SNTRUP761X25519_SHA512] = kex_gen_client;
@@ -487,7 +489,8 @@ _ssh_host_public_key(int type, int nid, struct ssh *ssh)
 	TAILQ_FOREACH(k, &ssh->public_keys, next) {
 		debug3_f("check %s", sshkey_type(k->key));
 		if (k->key->type == type &&
-		    (type != KEY_ECDSA || k->key->ecdsa_nid == nid))
+		    ((type != KEY_ECDSA && type != KEY_SM2) ||
+		    k->key->ecdsa_nid == nid))
 			return (k->key);
 	}
 	return (NULL);
@@ -502,7 +505,8 @@ _ssh_host_private_key(int type, int nid, struct ssh *ssh)
 	TAILQ_FOREACH(k, &ssh->private_keys, next) {
 		debug3_f("check %s", sshkey_type(k->key));
 		if (k->key->type == type &&
-		    (type != KEY_ECDSA || k->key->ecdsa_nid == nid))
+		    ((type != KEY_ECDSA && type != KEY_SM2) ||
+		    k->key->ecdsa_nid == nid))
 			return (k->key);
 	}
 	return (NULL);
@@ -555,7 +559,8 @@ _ssh_order_hostkeyalgs(struct ssh *ssh)
 			    (!sshkey_is_cert(k->key) ||
 			    k->key->type != sshkey_type_plain(ktype)))
 				continue;
-			if (sshkey_type_plain(k->key->type) == KEY_ECDSA &&
+			if ((sshkey_type_plain(k->key->type) == KEY_ECDSA ||
+			    sshkey_type_plain(k->key->type) == KEY_SM2) &&
 			    k->key->ecdsa_nid != nid)
 				continue;
 			/* Candidate */

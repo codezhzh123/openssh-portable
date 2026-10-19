@@ -29,6 +29,9 @@ int LLVMFuzzerTestOneInput(const uint8_t* sig, size_t slen)
   static struct sshkey *ecdsa256 = generate_or_die(KEY_ECDSA, 256);
   static struct sshkey *ecdsa384 = generate_or_die(KEY_ECDSA, 384);
   static struct sshkey *ecdsa521 = generate_or_die(KEY_ECDSA, 521);
+#ifdef HAVE_SM2
+  static struct sshkey *sm2 = generate_or_die(KEY_SM2, 256);
+#endif /* HAVE_SM2 */
 #endif
   struct sshkey_sig_details *details = NULL;
   static struct sshkey *ed25519 = generate_or_die(KEY_ED25519, 0);
@@ -52,6 +55,11 @@ int LLVMFuzzerTestOneInput(const uint8_t* sig, size_t slen)
   sshkey_verify(ecdsa521, sig, slen, (const u_char *)data, dlen, NULL, 0, &details);
   sshkey_sig_details_free(details);
   details = NULL;
+#ifdef HAVE_SM2
+  sshkey_verify(sm2, sig, slen, (const u_char *)data, dlen, NULL, 0, &details);
+  sshkey_sig_details_free(details);
+  details = NULL;
+#endif /* HAVE_SM2 */
 #endif
 
   sshkey_verify(ed25519, sig, slen, (const u_char *)data, dlen, NULL, 0, &details);

@@ -34,6 +34,13 @@
 #include <openssl/ecdsa.h>
 #include <openssl/evp.h>
 #define SSH_OPENSSL_VERSION OpenSSL_version(OPENSSL_VERSION)
+/*
+ * SM2/SM3/SM4 support. These algorithms are only provided by OpenSSL
+ * builds that include them (LibreSSL does not).
+ */
+#if defined(NID_sm2) && !defined(LIBRESSL_VERSION_NUMBER)
+# define HAVE_SM2
+#endif
 #else /* OPENSSL */
 #define BIGNUM		void
 #define RSA		void
@@ -57,6 +64,8 @@ enum sshkey_types {
 	KEY_RSA_CERT,
 	KEY_ECDSA_CERT,
 	KEY_ED25519_CERT,
+	KEY_SM2,
+	KEY_SM2_CERT,
 	KEY_ECDSA_SK,
 	KEY_ECDSA_SK_CERT,
 	KEY_ED25519_SK,
@@ -314,6 +323,10 @@ void	 sshkey_sig_details_free(struct sshkey_sig_details *);
 
 #ifdef WITH_OPENSSL
 int	sshkey_ecdsa_fixup_group(EVP_PKEY *k); /* ssh-ecdsa.c */
+#endif
+
+#ifdef HAVE_SM2
+EC_KEY	*sshkey_sm2_pkey_to_ec_key(EVP_PKEY *pkey); /* ssh-sm2.c */
 #endif
 
 #ifdef SSHKEY_INTERNAL

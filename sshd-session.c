@@ -422,6 +422,7 @@ get_hostkey_by_type(int type, int nid, int need_private, struct ssh *ssh)
 		switch (type) {
 		case KEY_RSA_CERT:
 		case KEY_ECDSA_CERT:
+		case KEY_SM2_CERT:
 		case KEY_ED25519_CERT:
 		case KEY_ECDSA_SK_CERT:
 		case KEY_ED25519_SK_CERT:
@@ -438,8 +439,10 @@ get_hostkey_by_type(int type, int nid, int need_private, struct ssh *ssh)
 			continue;
 		switch (type) {
 		case KEY_ECDSA:
+		case KEY_SM2:
 		case KEY_ECDSA_SK:
 		case KEY_ECDSA_CERT:
+		case KEY_SM2_CERT:
 		case KEY_ECDSA_SK_CERT:
 			if (key->ecdsa_nid != nid)
 				continue;

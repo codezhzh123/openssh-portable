@@ -184,6 +184,9 @@ type_bits_valid(int type, const char *name, uint32_t *bitsp)
 		int nid;
 
 		switch(type) {
+		case KEY_SM2:
+			*bitsp = 256;
+			break;
 		case KEY_ECDSA:
 			if (name != NULL &&
 			    (nid = sshkey_ecdsa_nid_from_name(name)) > 0)
@@ -211,6 +214,11 @@ type_bits_valid(int type, const char *name, uint32_t *bitsp)
 		if (sshkey_ecdsa_bits_to_nid(*bitsp) == -1)
 			fatal("Invalid ECDSA key length: valid lengths are "
 			    "256, 384 or 521 bits");
+		break;
+	case KEY_SM2:
+		if (*bitsp != 256)
+			fatal("Invalid SM2 key length: must be 256 bits");
+		break;
 	}
 #endif
 }
@@ -249,6 +257,10 @@ ask_filename(struct passwd *pw, const char *prompt)
 		name = _PATH_SSH_CLIENT_ID_ED25519;
 	else {
 		switch (sshkey_type_from_shortname(key_type_name)) {
+		case KEY_SM2_CERT:
+		case KEY_SM2:
+			name = _PATH_SSH_CLIENT_ID_SM2;
+			break;
 		case KEY_ECDSA_CERT:
 		case KEY_ECDSA:
 			name = _PATH_SSH_CLIENT_ID_ECDSA;
@@ -361,6 +373,7 @@ do_convert_to_pkcs8(struct sshkey *k)
 			fatal("PEM_write_RSA_PUBKEY failed");
 		break;
 	case KEY_ECDSA:
+	case KEY_SM2:
 		if (!PEM_write_EC_PUBKEY(stdout,
 		    EVP_PKEY_get0_EC_KEY(k->pkey)))
 			fatal("PEM_write_EC_PUBKEY failed");
@@ -380,6 +393,7 @@ do_convert_to_pem(struct sshkey *k)
 			fatal("PEM_write_RSAPublicKey failed");
 		break;
 	case KEY_ECDSA:
+	case KEY_SM2:
 		if (!PEM_write_EC_PUBKEY(stdout,
 		    EVP_PKEY_get0_EC_KEY(k->pkey)))
 			fatal("PEM_write_EC_PUBKEY failed");
@@ -774,6 +788,7 @@ do_convert_from(struct passwd *pw)
 	} else {
 		switch (k->type) {
 		case KEY_ECDSA:
+		case KEY_SM2:
 			ok = PEM_write_ECPrivateKey(stdout,
 			    EVP_PKEY_get0_EC_KEY(k->pkey), NULL, NULL, 0,
 			    NULL, NULL);
@@ -3304,7 +3319,7 @@ usage(void)
 	fprintf(stderr,
 	    "usage: ssh-keygen [-q] [-a rounds] [-b bits] [-C comment] [-f output_keyfile]\n"
 	    "                  [-m format] [-N new_passphrase] [-O option]\n"
-	    "                  [-t ecdsa|ecdsa-sk|ed25519|ed25519-sk|mldsa44-ed25519|rsa]\n"
+	    "                  [-t ecdsa|ecdsa-sk|ed25519|ed25519-sk|mldsa44-ed25519|rsa|sm2]\n"
 	    "                  [-w provider] [-Z cipher]\n"
 	    "       ssh-keygen -p [-a rounds] [-f keyfile] [-m format] [-N new_passphrase]\n"
 	    "                   [-P old_passphrase] [-Z cipher]\n"

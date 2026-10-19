@@ -109,6 +109,10 @@ extern const struct sshkey_impl sshkey_ecdsa_nistp384_impl;
 extern const struct sshkey_impl sshkey_ecdsa_nistp384_cert_impl;
 extern const struct sshkey_impl sshkey_ecdsa_nistp521_impl;
 extern const struct sshkey_impl sshkey_ecdsa_nistp521_cert_impl;
+#ifdef HAVE_SM2
+extern const struct sshkey_impl sshkey_sm2_impl;
+extern const struct sshkey_impl sshkey_sm2_cert_impl;
+#endif
 extern const struct sshkey_impl sshkey_rsa_impl;
 extern const struct sshkey_impl sshkey_rsa_cert_impl;
 extern const struct sshkey_impl sshkey_rsa_sha256_impl;
@@ -135,6 +139,10 @@ const struct sshkey_impl * const keyimpls[] = {
 	&sshkey_ecdsa_nistp384_cert_impl,
 	&sshkey_ecdsa_nistp521_impl,
 	&sshkey_ecdsa_nistp521_cert_impl,
+# ifdef HAVE_SM2
+	&sshkey_sm2_impl,
+	&sshkey_sm2_cert_impl,
+# endif
 # ifdef ENABLE_SK
 	&sshkey_ecdsa_sk_impl,
 	&sshkey_ecdsa_sk_cert_impl,
@@ -265,6 +273,8 @@ key_type_is_ecdsa_variant(int type)
 	case KEY_ECDSA_CERT:
 	case KEY_ECDSA_SK:
 	case KEY_ECDSA_SK_CERT:
+	case KEY_SM2:
+	case KEY_SM2_CERT:
 		return 1;
 	}
 	return 0;
@@ -445,6 +455,8 @@ sshkey_type_plain(int type)
 		return KEY_MLDSA44_ED25519;
 	case KEY_ED25519_SK_CERT:
 		return KEY_ED25519_SK;
+	case KEY_SM2_CERT:
+		return KEY_SM2;
 	default:
 		return type;
 	}
@@ -467,6 +479,8 @@ sshkey_type_certified(int type)
 		return KEY_MLDSA44_ED25519_CERT;
 	case KEY_ED25519_SK:
 		return KEY_ED25519_SK_CERT;
+	case KEY_SM2:
+		return KEY_SM2_CERT;
 	default:
 		return -1;
 	}
@@ -575,6 +589,10 @@ sshkey_curve_name_to_nid(const char *name)
 		return NID_secp384r1;
 	else if (strcmp(name, "nistp521") == 0)
 		return NID_secp521r1;
+#ifdef HAVE_SM2
+	else if (strcmp(name, "sm2") == 0)
+		return NID_sm2;
+#endif
 	else
 		return -1;
 }
@@ -589,6 +607,10 @@ sshkey_curve_nid_to_bits(int nid)
 		return 384;
 	case NID_secp521r1:
 		return 521;
+#ifdef HAVE_SM2
+	case NID_sm2:
+		return 256;
+#endif
 	default:
 		return 0;
 	}
@@ -619,6 +641,10 @@ sshkey_curve_nid_to_name(int nid)
 		return "nistp384";
 	case NID_secp521r1:
 		return "nistp521";
+#ifdef HAVE_SM2
+	case NID_sm2:
+		return "sm2";
+#endif
 	default:
 		return NULL;
 	}
@@ -3340,6 +3366,7 @@ sshkey_private_to_blob_pem_pkcs8(struct sshkey *key, struct sshbuf *buf,
 
 	switch (key->type) {
 	case KEY_ECDSA:
+	case KEY_SM2:
 		if (format == SSHKEY_PRIVATE_PEM) {
 			success = PEM_write_bio_ECPrivateKey(bio,
 			    EVP_PKEY_get0_EC_KEY(key->pkey),
@@ -3418,6 +3445,7 @@ sshkey_private_to_fileblob(struct sshkey *key, struct sshbuf *blob,
 	switch (key->type) {
 #ifdef WITH_OPENSSL
 	case KEY_ECDSA:
+	case KEY_SM2:
 	case KEY_RSA:
 	case KEY_ED25519:
 		break; /* see below */
@@ -3594,18 +3622,71 @@ sshkey_parse_private_pem_fileblob(struct sshbuf *blob, int type,
 		prv->pkey = pk;
 		if ((r = sshkey_check_rsa_length(prv, 0)) != 0)
 			goto out;
-	} else if (EVP_PKEY_base_id(pk) == EVP_PKEY_EC &&
-	    (type == KEY_UNSPEC || type == KEY_ECDSA)) {
+	} else if ((EVP_PKEY_base_id(pk) == EVP_PKEY_EC
+#ifdef HAVE_SM2
+	    || EVP_PKEY_base_id(pk) == EVP_PKEY_SM2
+#endif
+	    ) && (type == KEY_UNSPEC || type == KEY_ECDSA
+#ifdef HAVE_SM2
+	    || type == KEY_SM2
+#endif
+	    )) {
 		if ((prv = sshkey_new(KEY_UNSPEC)) == NULL) {
 			r = SSH_ERR_ALLOC_FAIL;
 			goto out;
 		}
-		if ((prv->ecdsa_nid = sshkey_ecdsa_fixup_group(pk)) == -1 ||
-		    (ecdsa = EVP_PKEY_get1_EC_KEY(pk)) == NULL) {
+#ifdef HAVE_SM2
+		/*
+		 * SM2 keys are identified by EVP_PKEY_id() == NID_sm2:
+		 * OpenSSL reports EVP_PKEY_base_id() == EVP_PKEY_EC for them
+		 * (even for provider-backed keys).  OpenSSL 3.x may store SM2
+		 * keys as provider-backed keys that cannot always be retrieved
+		 * with EVP_PKEY_get1_EC_KEY(), so re-import the key material
+		 * into a legacy EC EVP_PKEY to make sure the rest of the EC
+		 * code (serialisation and the SM2 sign/verify glue) handles it.
+		 */
+		if (EVP_PKEY_id(pk) == NID_sm2) {
+			EC_KEY *sm2_ec;
+			EVP_PKEY *ec_pkey = NULL;
+
+			if ((sm2_ec = sshkey_sm2_pkey_to_ec_key(pk)) == NULL) {
+				r = SSH_ERR_LIBCRYPTO_ERROR;
+				goto out;
+			}
+			prv->ecdsa_nid = EC_GROUP_get_curve_name(
+			    EC_KEY_get0_group(sm2_ec));
+			if (prv->ecdsa_nid != NID_sm2 ||
+			    (ec_pkey = EVP_PKEY_new()) == NULL ||
+			    EVP_PKEY_set1_EC_KEY(ec_pkey, sm2_ec) != 1) {
+				EC_KEY_free(sm2_ec);
+				EVP_PKEY_free(ec_pkey);
+				r = SSH_ERR_INVALID_FORMAT;
+				goto out;
+			}
+			EC_KEY_free(sm2_ec);
+			EVP_PKEY_free(pk);
+			pk = ec_pkey;
+			prv->type = KEY_SM2;
+		} else
+#endif /* HAVE_SM2 */
+		{
+			if ((prv->ecdsa_nid = sshkey_ecdsa_fixup_group(pk)) ==
+			    -1 || (ecdsa = EVP_PKEY_get1_EC_KEY(pk)) == NULL) {
+				r = SSH_ERR_LIBCRYPTO_ERROR;
+				goto out;
+			}
+#ifdef HAVE_SM2
+			prv->type = prv->ecdsa_nid == NID_sm2 ?
+			    KEY_SM2 : KEY_ECDSA;
+#else
+			prv->type = KEY_ECDSA;
+#endif
+		}
+		if (ecdsa == NULL &&
+		    ((ecdsa = EVP_PKEY_get1_EC_KEY(pk)) == NULL)) {
 			r = SSH_ERR_LIBCRYPTO_ERROR;
 			goto out;
 		}
-		prv->type = KEY_ECDSA;
 		if (sshkey_curve_nid_to_name(prv->ecdsa_nid) == NULL ||
 		    sshkey_ec_validate_public(EC_KEY_get0_group(ecdsa),
 		    EC_KEY_get0_public_key(ecdsa)) != 0 ||

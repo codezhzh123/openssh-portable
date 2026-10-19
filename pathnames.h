@@ -95,6 +95,7 @@
 #define _PATH_SSH_CLIENT_ID_ECDSA_SK	_PATH_SSH_USER_DIR "/id_ecdsa_sk"
 #define _PATH_SSH_CLIENT_ID_ED25519_SK	_PATH_SSH_USER_DIR "/id_ed25519_sk"
 #define _PATH_SSH_CLIENT_ID_MLDSA44_ED25519 _PATH_SSH_USER_DIR "/id_mldsa44_ed25519"
+#define _PATH_SSH_CLIENT_ID_SM2		_PATH_SSH_USER_DIR "/id_sm2"
 
 /*
  * Configuration file in user's home directory.  This file need not be

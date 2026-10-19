@@ -603,6 +603,8 @@ ssh_add_identity_constrained(int sock, struct sshkey *key,
 	case KEY_RSA_CERT:
 	case KEY_ECDSA:
 	case KEY_ECDSA_CERT:
+	case KEY_SM2:
+	case KEY_SM2_CERT:
 	case KEY_ECDSA_SK:
 	case KEY_ECDSA_SK_CERT:
 #endif

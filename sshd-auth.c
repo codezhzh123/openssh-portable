@@ -248,6 +248,7 @@ list_hostkey_types(void)
 			append_hostkey_type(b, "rsa-sha2-256");
 			/* FALLTHROUGH */
 		case KEY_ECDSA:
+		case KEY_SM2:
 		case KEY_ED25519:
 		case KEY_MLDSA44_ED25519:
 		case KEY_ECDSA_SK:
@@ -268,6 +269,7 @@ list_hostkey_types(void)
 			    "rsa-sha2-256-cert-v01@openssh.com");
 			/* FALLTHROUGH */
 		case KEY_ECDSA_CERT:
+		case KEY_SM2_CERT:
 		case KEY_ED25519_CERT:
 		case KEY_MLDSA44_ED25519_CERT:
 		case KEY_ECDSA_SK_CERT:
@@ -293,6 +295,7 @@ get_hostkey_public_by_type(int type, int nid, struct ssh *ssh)
 		switch (type) {
 		case KEY_RSA_CERT:
 		case KEY_ECDSA_CERT:
+		case KEY_SM2_CERT:
 		case KEY_ED25519_CERT:
 		case KEY_MLDSA44_ED25519_CERT:
 		case KEY_ECDSA_SK_CERT:
@@ -307,8 +310,10 @@ get_hostkey_public_by_type(int type, int nid, struct ssh *ssh)
 			continue;
 		switch (type) {
 		case KEY_ECDSA:
+		case KEY_SM2:
 		case KEY_ECDSA_SK:
 		case KEY_ECDSA_CERT:
+		case KEY_SM2_CERT:
 		case KEY_ECDSA_SK_CERT:
 			if (key->ecdsa_nid != nid)
 				continue;
@@ -810,6 +815,7 @@ do_ssh2_kex(struct ssh *ssh)
 	kex->kex[KEX_DH_GEX_SHA1] = kexgex_server;
 	kex->kex[KEX_DH_GEX_SHA256] = kexgex_server;
 	kex->kex[KEX_ECDH_SHA2] = kex_gen_server;
+	kex->kex[KEX_SM2_SM3] = kex_gen_server;
 	kex->kex[KEX_KEM_MLKEM768ECDH_SHA256] = kex_gen_server;
 #endif
 	kex->kex[KEX_C25519_SHA256] = kex_gen_server;

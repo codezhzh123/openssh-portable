@@ -65,9 +65,10 @@ int ssh_port = SSH_DEFAULT_PORT;
 #define KT_ECDSA_SK	(1<<4)
 #define KT_ED25519_SK	(1<<5)
 #define KT_MLDSA44_ED25519 (1<<6)
+#define KT_SM2		(1<<7)
 
 #define KT_MIN		KT_RSA
-#define KT_MAX		KT_MLDSA44_ED25519
+#define KT_MAX		KT_SM2
 
 int get_cert = 0;
 int get_keytypes = KT_RSA|KT_ECDSA|KT_ED25519|KT_ECDSA_SK|KT_ED25519_SK|KT_MLDSA44_ED25519;
@@ -266,6 +267,11 @@ keygrab_ssh2(con *c)
 		    "ssh-mldsa44-ed25519-cert" :
 		    "ssh-mldsa44-ed25519";
 		break;
+	case KT_SM2:
+		myproposal[PROPOSAL_SERVER_HOST_KEY_ALGS] = get_cert ?
+		    "sm2-cert" :
+		    "sm2";
+		break;
 	case KT_ECDSA_SK:
 		myproposal[PROPOSAL_SERVER_HOST_KEY_ALGS] = get_cert ?
 		    "sk-ecdsa-sha2-nistp256-cert-v01@openssh.com" :
@@ -294,6 +300,7 @@ keygrab_ssh2(con *c)
 	c->c_ssh->kex->kex[KEX_DH_GEX_SHA1] = kexgex_client;
 	c->c_ssh->kex->kex[KEX_DH_GEX_SHA256] = kexgex_client;
 	c->c_ssh->kex->kex[KEX_ECDH_SHA2] = kex_gen_client;
+	c->c_ssh->kex->kex[KEX_SM2_SM3] = kex_gen_client;
 #endif
 	c->c_ssh->kex->kex[KEX_C25519_SHA256] = kex_gen_client;
 	c->c_ssh->kex->kex[KEX_KEM_SNTRUP761X25519_SHA512] = kex_gen_client;
@@ -764,6 +771,9 @@ main(int argc, char **argv)
 					break;
 				case KEY_MLDSA44_ED25519:
 					get_keytypes |= KT_MLDSA44_ED25519;
+					break;
+				case KEY_SM2:
+					get_keytypes |= KT_SM2;
 					break;
 				case KEY_UNSPEC:
 				default:

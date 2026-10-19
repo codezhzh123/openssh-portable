@@ -1686,6 +1686,7 @@ main(int ac, char **av)
 		switch (keytype) {
 		case KEY_RSA:
 		case KEY_ECDSA:
+		case KEY_SM2:
 		case KEY_ED25519:
 		case KEY_MLDSA44_ED25519:
 		case KEY_ECDSA_SK:

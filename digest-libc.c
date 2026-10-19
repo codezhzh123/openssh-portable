@@ -120,6 +120,14 @@ const struct ssh_digest digests[SSH_DIGEST_MAX] = {
 		(md_init_fn *) SHA512Init,
 		(md_update_fn *) SHA512Update,
 		(md_final_fn *) SHA512Final
+	},
+	/* SM3 is only provided by OpenSSL; keep a named placeholder so that
+	 * ssh_digest_alg_by_name() does not dereference a NULL name. */
+	{
+		-1,
+		"SM3",
+		0, 0, 0,
+		NULL, NULL, NULL
 	}
 };
 

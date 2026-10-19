@@ -65,6 +65,9 @@ static const struct macalg macs[] = {
 	{ "hmac-md5-96",			SSH_DIGEST, SSH_DIGEST_MD5, 96, 0, 0, 0 },
 	{ "umac-64@openssh.com",		SSH_UMAC, 0, 0, 128, 64, 0 },
 	{ "umac-128@openssh.com",		SSH_UMAC128, 0, 0, 128, 128, 0 },
+#if defined(WITH_OPENSSL) && !defined(OPENSSL_NO_SM3)
+	{ "hmac-sm3",				SSH_DIGEST, SSH_DIGEST_SM3, 0, 0, 0, 0 },
+#endif
 
 	/* Encrypt-then-MAC variants */
 	{ "hmac-sha1-etm@openssh.com",		SSH_DIGEST, SSH_DIGEST_SHA1, 0, 0, 0, 1 },
